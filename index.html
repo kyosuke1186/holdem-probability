@@ -76,6 +76,7 @@
     color:#111;
   }
   .red{color:#d64040 !important}
+
   .controls{
     display:flex;
     gap:8px;
@@ -92,7 +93,28 @@
   }
   .b1{background:#2d8cff;color:#fff}
   .b2{background:#ff6b6b;color:#fff}
-  .deck{
+
+  .deck-groups{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .suit-group{
+    background:#141d25;
+    border:1px solid #2a3947;
+    border-radius:10px;
+    padding:10px;
+  }
+  .suit-title{
+    font-size:13px;
+    font-weight:bold;
+    margin-bottom:8px;
+    color:#9fd3ff;
+  }
+  .suit-title.red-title{
+    color:#ff8d8d;
+  }
+  .deck-row{
     display:grid;
     grid-template-columns:repeat(13,minmax(0,1fr));
     gap:6px;
@@ -117,6 +139,7 @@
     background:#51606c;
     color:#c7d0d8;
   }
+
   .hero{
     background:linear-gradient(135deg,#1b2a36,#223f4d);
     border:1px solid #33586a;
@@ -140,6 +163,7 @@
     color:#00e676;
     line-height:1;
   }
+
   .prob-list{
     display:flex;
     flex-direction:column;
@@ -180,9 +204,11 @@
     background:linear-gradient(90deg,#00d1ff,#00e676);
     border-radius:999px;
   }
+
   .muted{color:#8ea0af}
+
   @media (max-width:700px){
-    .deck{grid-template-columns:repeat(6,minmax(0,1fr))}
+    .deck-row{grid-template-columns:repeat(4,minmax(0,1fr))}
     .hero-hand{font-size:24px}
     .hero-rate{font-size:34px}
   }
@@ -191,7 +217,7 @@
 <body>
 <div class="wrap">
   <h1>ホールデム役成立確率</h1>
-  <div class="sub">カードを押すたびに次の枠へ自動で進みます。入力した瞬間に自動計算します。</div>
+  <div class="sub">カードを押すたびに次の枠へ自動で進みます。柄ごとに分けてあります。</div>
 
   <div class="box">
     <div class="row">
@@ -212,7 +238,7 @@
   </div>
 
   <div class="box">
-    <div class="deck" id="deck"></div>
+    <div class="deck-groups" id="deckGroups"></div>
   </div>
 
   <div id="resultBox" class="box">
@@ -222,6 +248,12 @@
 
 <script>
 const SUITS=["S","H","D","C"];
+const SUIT_LABEL={
+  S:"♠ スペード",
+  H:"♥ ハート",
+  D:"♦ ダイヤ",
+  C:"♣ クラブ"
+};
 const RANKS=[14,13,12,11,10,9,8,7,6,5,4,3,2];
 const SYM={S:"♠",H:"♥",D:"♦",C:"♣"};
 const HANDS=["ハイカード","ワンペア","ツーペア","スリーカード","ストレート","フラッシュ","フルハウス","フォーカード","ストレートフラッシュ","ロイヤルフラッシュ"];
@@ -229,7 +261,7 @@ const slotNames=["h1","h2","f1","f2","f3","t","r"];
 const slots={h1:null,h2:null,f1:null,f2:null,f3:null,t:null,r:null};
 let active="h1";
 
-const deckEl=document.getElementById("deck");
+const deckGroupsEl=document.getElementById("deckGroups");
 const resultBox=document.getElementById("resultBox");
 
 function rLabel(r){return r===14?"A":r===13?"K":r===12?"Q":r===11?"J":String(r)}
@@ -354,7 +386,7 @@ function renderSlots(){
 }
 function renderDeck(){
   const used=new Set(known().map(key));
-  deckEl.querySelectorAll(".card").forEach(el=>{
+  document.querySelectorAll(".card").forEach(el=>{
     el.classList.toggle("used",used.has(el.dataset.key));
   });
 }
@@ -462,7 +494,9 @@ function renderProbabilities(cnt,total,title){
   const items=HANDS.map(name=>({
     name,
     rateNum:(cnt[name]/total)*100
-  })).sort((a,b)=>b.rateNum-a.rateNum);
+  }))
+  .filter(item=>item.rateNum > 0)
+  .sort((a,b)=>b.rateNum-a.rateNum);
 
   const top=items[0];
   const list=items.map(item=>`
@@ -483,9 +517,7 @@ function renderProbabilities(cnt,total,title){
       <div class="hero-hand">${top.name}</div>
       <div class="hero-rate">${top.rateNum.toFixed(1)}%</div>
     </div>
-    <div class="prob-list">
-      ${list}
-    </div>
+    <div class="prob-list">${list}</div>
   `;
 }
 
@@ -497,6 +529,16 @@ for(const s of slotNames){
 }
 
 for(const suit of SUITS){
+  const group=document.createElement("div");
+  group.className="suit-group";
+
+  const title=document.createElement("div");
+  title.className="suit-title" + (red(suit) ? " red-title" : "");
+  title.textContent=SUIT_LABEL[suit];
+
+  const row=document.createElement("div");
+  row.className="deck-row";
+
   for(const rank of RANKS){
     const c={suit,rank};
     const el=document.createElement("div");
@@ -507,8 +549,12 @@ for(const suit of SUITS){
       if(el.classList.contains("used")) return;
       assign(c);
     });
-    deckEl.appendChild(el);
+    row.appendChild(el);
   }
+
+  group.appendChild(title);
+  group.appendChild(row);
+  deckGroupsEl.appendChild(group);
 }
 
 renderAll();
